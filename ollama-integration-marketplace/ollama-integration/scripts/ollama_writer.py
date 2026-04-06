@@ -70,6 +70,7 @@ def _build_terminal_instructions(mode: str) -> str:
 # ---------------------------------------------------------------------------
 
 TURN_TIMEOUT_SECONDS = 180
+OLLAMA_BASE_URL = "http://localhost:11434"
 
 
 def _call_ollama(prompt: str, model: str = "qwen3-coder:30b", think: str | None = None) -> str:
@@ -87,7 +88,7 @@ def _call_ollama(prompt: str, model: str = "qwen3-coder:30b", think: str | None 
     payload = json.dumps(body).encode("utf-8")
 
     req = urllib.request.Request(
-        "http://localhost:11434/api/generate",
+        f"{OLLAMA_BASE_URL}/api/generate",
         data=payload,
         headers={"Content-Type": "application/json"},
     )

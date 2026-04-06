@@ -15,6 +15,39 @@ Use this skill when the user wants to delegate a coding or file-manipulation tas
 - **tools** (optional, default: `["read", "write"]`) — Which file tools to enable. Valid values: `"read"`, `"write"`.
 - **think** (optional, default: omitted) — Reasoning effort level: `"low"`, `"medium"`, or `"high"`. Supported by OpenAI-style models via ollama (e.g. qwen3). Omit for models that don't support it.
 
+## Step 1: Check ollama availability
+
+Before doing anything else, check whether ollama is reachable:
+
+```python
+import urllib.request
+import urllib.error
+
+ollama_base = "http://localhost:11434"
+
+try:
+    urllib.request.urlopen(f"{ollama_base}/api/tags", timeout=3)
+    # ollama is running — proceed normally
+except (urllib.error.URLError, OSError):
+    ollama_available = False
+```
+
+If the check fails, ask the user:
+
+> **Ollama not found at `http://localhost:11434`.** Is ollama running somewhere else, or is it not installed?
+>
+> - **It's running at a different address** — provide the base URL (e.g. `http://192.168.1.10:11434`)
+> - **It's not running right now** — start it with `ollama serve` and try again
+> - **It's not installed** — see below
+
+If the user provides an alternate URL, use it as the base for all ollama API calls (pass it through to `ollama_writer` or patch `ollama_writer.OLLAMA_BASE_URL` if that variable exists).
+
+If ollama is not installed, inform the user:
+
+> Installing ollama is outside the scope of this plugin. Please follow the official installation guide at **https://ollama.com/download**, then return here once `ollama serve` is running.
+
+Stop and do not proceed until ollama is reachable.
+
 ## Ask the user: think level
 
 Before running, ask the user which think level to use:
