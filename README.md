@@ -2,6 +2,16 @@
 
 # claude-ollama-integration-plugin
 
+> **🔥 Save tokens!** Offload heavy coding tasks to a local ollama model — no cloud credits burned.
+>
+> **🤖 Have Claude manage ollama agents!** Claude Code orchestrates the full task loop: tool calls, file edits, command execution, session memory.
+>
+> **⚙️ Automate designing ollama apps!** Use `/ollama-integration:ollama-completion` to spin up sandboxed ollama agents on demand — no boilerplate, no babysitting.
+>
+> **🔒 Sandboxed and safe.** The local model can only touch files you allow, in the directory you specify.
+>
+> **💾 Persistent sessions.** Pick up exactly where the model left off — across calls, across restarts.
+
 A Claude Code plugin that exposes a local [ollama](https://ollama.com) model as a sandboxed task-execution agent. Gives Claude Code (or any orchestrator) a way to run tasks using a local LLM instead of a cloud model — with controlled file access, session persistence, and configurable reasoning effort.
 
 ## What it does
