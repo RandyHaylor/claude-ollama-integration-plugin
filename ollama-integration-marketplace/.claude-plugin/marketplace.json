@@ -1,0 +1,8 @@
+{
+  "name": "ollama-integration-marketplace",
+  "owner": { "name": "RandyHaylor" },
+  "metadata": { "description": "Local ollama model as a sandboxed task-execution agent for Claude Code" },
+  "plugins": [
+    { "name": "ollama-integration", "source": "./ollama-integration", "description": "Exposes a local ollama model as a sandboxed task-execution agent with file tools and session persistence" }
+  ]
+}

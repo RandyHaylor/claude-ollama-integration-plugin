@@ -1,0 +1,5 @@
+{
+  "name": "ollama-integration",
+  "description": "Exposes a local ollama model as a sandboxed task-execution agent with file tools, session persistence, and optional command execution.",
+  "author": { "name": "RandyHaylor" }
+}
