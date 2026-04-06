@@ -1,3 +1,5 @@
+![claude+ollama](claude+ollama.jpg)
+
 # claude-ollama-integration-plugin
 
 A Claude Code plugin that exposes a local [ollama](https://ollama.com) model as a sandboxed task-execution agent. Gives Claude Code (or any orchestrator) a way to run tasks using a local LLM instead of a cloud model — with controlled file access, session persistence, and configurable reasoning effort.
