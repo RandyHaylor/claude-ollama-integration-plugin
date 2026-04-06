@@ -40,16 +40,33 @@ claude-ollama-integration-plugin/
         test_plugin_structure.py
 ```
 
+## Platform support
+
+| Platform | File tools | run_command |
+|----------|-----------|-------------|
+| macOS | ✅ | ✅ |
+| Linux | ✅ | ✅ |
+| Windows | ✅ | ✅ (auto-adapted) |
+
+`ollama_writer` detects the current OS at runtime and tells the model which shell idioms to use. On Windows the model will use `python` instead of `python3`, `dir` instead of `ls`, `type` instead of `cat`, and Windows-style paths automatically — no configuration needed.
+
 ## Prerequisites
 
 ### 1. Ollama running locally
 
+**macOS / Linux:**
 ```bash
 ollama serve
-ollama pull qwen3-coder:30b   # or any supported model
+ollama pull qwen3-coder:30b
 ```
 
-Verify: `curl http://localhost:11434/api/tags`
+**Windows:**
+```powershell
+ollama serve
+ollama pull qwen3-coder:30b
+```
+
+Verify (all platforms): `curl http://localhost:11434/api/tags`
 
 ### 2. Python dependency
 
@@ -84,7 +101,8 @@ import ollama_writer
 
 result = ollama_writer.run(
     task="Write a Flask hello-world app",
-    sandbox="/tmp/my-flask-app",
+    sandbox="/tmp/my-flask-app",        # macOS/Linux
+    # sandbox="C:/tmp/my-flask-app",   # Windows
     tools=["read", "write"],
     session_id="flask-job-001",
     think="low",   # optional: "low", "medium", "high"
@@ -93,9 +111,10 @@ result = ollama_writer.run(
 
 ### Handling `run_command`
 
-When the model wants to execute a command, `run()` returns immediately with a `run_command` object. The caller runs the command and resumes with the same `session_id`:
+When the model wants to execute a command, `run()` returns immediately with a `run_command` object. The caller runs the command and resumes with the same `session_id`. The model automatically uses OS-appropriate commands:
 
 ```python
+import subprocess
 session_id = "my-session"
 task = "Write check.py that prints 2+2, then run it"
 
@@ -107,7 +126,6 @@ while True:
         break
 
     if result.get("tool") == "run_command":
-        import subprocess
         command = result["args"]["command"]
         proc = subprocess.run(command, shell=True, cwd="/tmp/sandbox", capture_output=True, text=True)
         task = f'Command result for "{command}":\n{proc.stdout}{proc.stderr}\n\nContinue your task.'

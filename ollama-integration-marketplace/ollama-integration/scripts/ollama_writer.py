@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
+import platform
 import sys
 import urllib.request
 from pathlib import Path
@@ -51,6 +52,22 @@ def _build_tool_instructions(tools: list[str]) -> str:
     else:
         lines.append("No tools available.")
     return "\n".join(lines)
+
+
+def _build_os_instructions() -> str:
+    """Return OS-specific command guidance so the model uses correct shell idioms."""
+    system = platform.system()
+    if system == "Windows":
+        return (
+            "OS: Windows. Use Windows-compatible shell commands only.\n"
+            "  - Use `python` not `python3`\n"
+            "  - Use `dir` not `ls`, `type` not `cat`, `copy` not `cp`, `del` not `rm`\n"
+            "  - Use backslashes or forward slashes in paths (both work in modern Windows)\n"
+            "  - Use `set VAR=value` not `export VAR=value`"
+        )
+    if system == "Darwin":
+        return "OS: macOS. Use standard Unix/bash commands."
+    return "OS: Linux. Use standard Unix/bash commands."
 
 
 def _build_terminal_instructions(mode: str) -> str:
@@ -260,12 +277,13 @@ def run(
 
     tool_inst = _build_tool_instructions(tools)
     term_inst = _build_terminal_instructions(mode)
+    os_inst = _build_os_instructions()
 
     # Load existing session or build fresh conversation.
     if session_id and _session_file_path(sandbox, session_id).exists():
         conversation = _session_file_path(sandbox, session_id).read_text(encoding="utf-8")
     else:
-        conversation = f"## TASK DESCRIPTION ##\n{task}\n## END TASK DESCRIPTION ##\n\n{tool_inst}\n\n{term_inst}"
+        conversation = f"## TASK DESCRIPTION ##\n{task}\n## END TASK DESCRIPTION ##\n\n{os_inst}\n\n{tool_inst}\n\n{term_inst}"
     log.info("START task=%s sandbox=%s tools=%s think=%s", task[:80], sandbox, tools, think)
 
     turn = 0
