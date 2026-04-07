@@ -47,8 +47,10 @@ def _build_tool_instructions(tools: list[str]) -> str:
             lines.append('  {"tool": "write_file", "args": {"path": "rel/path", "content": "full file"}}')
             lines.append('  {"tool": "edit_file", "args": {"path": "rel/path", "old_string": "find this", "new_string": "replace with"}}')
         lines.append('  {"tool": "list_files", "args": {}}')
+        lines.append('  {"tool": "run_command", "args": {"command": "shell command here"}}')
         lines.append("")
         lines.append("Paths are relative to project folder. One tool call per response.")
+        lines.append("Use run_command to execute shell commands (e.g. run a script, install a package, run tests).")
     else:
         lines.append("No tools available.")
     return "\n".join(lines)
@@ -90,19 +92,15 @@ TURN_TIMEOUT_SECONDS = 180
 OLLAMA_BASE_URL = "http://localhost:11434"
 
 
-def _call_ollama(prompt: str, model: str = "qwen3-coder:30b", think: str | None = None) -> str:
+def _call_ollama(prompt: str, model: str = "qwen3-coder:30b") -> str:
     """Single call to ollama. Returns response text or raises on timeout."""
     prompt = truncate_tokens(prompt)
 
-    body: dict = {
+    payload = json.dumps({
         "model": model,
         "prompt": prompt,
         "stream": False,
-    }
-    if think is not None:
-        body["think"] = think
-
-    payload = json.dumps(body).encode("utf-8")
+    }).encode("utf-8")
 
     req = urllib.request.Request(
         f"{OLLAMA_BASE_URL}/api/generate",
@@ -222,9 +220,9 @@ def _extract_all_json(text: str) -> list[dict]:
 def _is_terminal(obj: dict) -> bool:
     if obj.get("tool") == "run_command":
         return True
-    if obj.get("is_planning_done") is not None:
+    if obj.get("is_planning_done") is True:
         return True
-    if obj.get("is_execution_done") is not None:
+    if obj.get("is_execution_done") is True:
         return True
     if "task-can-be-split" in obj:
         return True
@@ -261,15 +259,8 @@ def run(
     tools: list[str] | None = None,
     max_turns: int | None = None,
     session_id: str | None = None,
-    think: str | None = None,
 ) -> dict:
-    """Run the agent loop. Returns dict with terminal response.
-
-    think: "low", "medium", or "high" — controls reasoning effort for models
-    that support it (e.g. qwen3). "low" = brief/direct/accurate instruction-
-    following. "high" = more inference, may introduce assumptions. None = omit
-    (model default).
-    """
+    """Run the agent loop. Returns dict with terminal response."""
     if tools is None:
         tools = []
     sandbox = Path(sandbox).resolve()
@@ -282,15 +273,17 @@ def run(
     # Load existing session or build fresh conversation.
     if session_id and _session_file_path(sandbox, session_id).exists():
         conversation = _session_file_path(sandbox, session_id).read_text(encoding="utf-8")
+        # Append the resume message (e.g. command result) so the model sees it.
+        conversation += f"\n\n{task}"
     else:
         conversation = f"## TASK DESCRIPTION ##\n{task}\n## END TASK DESCRIPTION ##\n\n{os_inst}\n\n{tool_inst}\n\n{term_inst}"
-    log.info("START task=%s sandbox=%s tools=%s think=%s", task[:80], sandbox, tools, think)
+    log.info("START task=%s sandbox=%s tools=%s", task[:80], sandbox, tools)
 
     turn = 0
     while True:
         log.info("TURN %d (%d chars)", turn, len(conversation))
         try:
-            response = _call_ollama(conversation, model=model, think=think)
+            response = _call_ollama(conversation, model=model)
         except (TimeoutError, OSError):
             key = "is_planning_done" if mode == "plan" else "is_execution_done"
             return {key: False, "summary": f"[FAILED] timeout on turn {turn}"}
@@ -314,6 +307,11 @@ def run(
                 if session_id:
                     _save_session(sandbox, session_id, conversation)
                 return obj
+
+            # If model returned is_execution_done:false, nudge it to continue.
+            if obj.get("is_execution_done") is False or obj.get("is_planning_done") is False:
+                conversation += "\n\nNot done yet. Use a tool call to continue, or return is_execution_done:true when complete."
+                break
 
             tool_name = obj.get("tool")
             if tool_name is None:
