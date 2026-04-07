@@ -91,8 +91,38 @@ def _build_terminal_instructions(mode: str) -> str:
 TURN_TIMEOUT_SECONDS = 180
 OLLAMA_BASE_URL = "http://localhost:11434"
 
+# Sampling profiles. Pass profile= to run() to select one.
+# qwen3-coder:30b model defaults: temperature=0.7, top_k=20, top_p=0.8, repeat_penalty=1.05
+PROFILES = {
+    "conservative": {
+        "temperature": 0.9,
+        "top_k": 40,
+        "top_p": 0.95,
+        "repeat_penalty": 1.0,
+    },
+    "default": {
+        "temperature": 1.2,
+        "top_k": 80,
+        "top_p": 0.99,
+        "repeat_penalty": 0.9,
+    },
+    "creative": {
+        "temperature": 1.4,
+        "top_k": 100,
+        "top_p": 0.99,
+        "repeat_penalty": 0.85,
+    },
+    "ollama-qwen-default": {
+        # Raw qwen3-coder:30b model defaults — no tuning.
+        "temperature": 0.7,
+        "top_k": 20,
+        "top_p": 0.8,
+        "repeat_penalty": 1.05,
+    },
+}
 
-def _call_ollama(prompt: str, model: str = "qwen3-coder:30b") -> str:
+
+def _call_ollama(prompt: str, model: str = "qwen3-coder:30b", profile: str = "default") -> str:
     """Single call to ollama. Returns response text or raises on timeout."""
     prompt = truncate_tokens(prompt)
 
@@ -100,6 +130,7 @@ def _call_ollama(prompt: str, model: str = "qwen3-coder:30b") -> str:
         "model": model,
         "prompt": prompt,
         "stream": False,
+        "options": PROFILES.get(profile, PROFILES["default"]),
     }).encode("utf-8")
 
     req = urllib.request.Request(
@@ -259,8 +290,13 @@ def run(
     tools: list[str] | None = None,
     max_turns: int | None = None,
     session_id: str | None = None,
+    profile: str = "default",
 ) -> dict:
-    """Run the agent loop. Returns dict with terminal response."""
+    """Run the agent loop. Returns dict with terminal response.
+
+    profile: "default", "conservative", or "creative" — controls sampling
+    parameters. "conservative" is recommended for TDD/coding tasks.
+    """
     if tools is None:
         tools = []
     sandbox = Path(sandbox).resolve()
@@ -283,7 +319,7 @@ def run(
     while True:
         log.info("TURN %d (%d chars)", turn, len(conversation))
         try:
-            response = _call_ollama(conversation, model=model)
+            response = _call_ollama(conversation, model=model, profile=profile)
         except (TimeoutError, OSError):
             key = "is_planning_done" if mode == "plan" else "is_execution_done"
             return {key: False, "summary": f"[FAILED] timeout on turn {turn}"}

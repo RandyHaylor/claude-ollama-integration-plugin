@@ -13,6 +13,7 @@ Use this skill when the user wants to delegate a coding or file-manipulation tas
 - **model** (optional, default: `qwen3-coder:30b`) — The ollama model name to use.
 - **session_id** (optional) — A string ID for persisting conversation across multiple calls. Pass the same ID to resume a previous session.
 - **tools** (optional, default: `["read", "write"]`) — Which file tools to enable. Valid values: `"read"`, `"write"`.
+- **profile** (optional, default: `"default"`) — Sampling profile: `"default"`, `"conservative"`, or `"creative"`. Use `"conservative"` for coding/TDD tasks (lower temperature, more predictable output).
 - **think** (optional, default: omitted) — Reasoning effort level: `"low"`, `"medium"`, or `"high"`. Supported by OpenAI-style models via ollama (e.g. qwen3). Omit for models that don't support it.
 
 ## Step 1: Check ollama availability
@@ -126,6 +127,7 @@ result = ollama_writer.run(
     tools: list[str] = [],  # enable "read" and/or "write"
     max_turns: int = None,  # limit turns (default: unlimited)
     session_id: str = None, # for session persistence and run_command resume
+    profile: str = "default",  # "default", "conservative", or "creative"
     think: str = None,      # "low", "medium", "high", or None (omit)
 )
 # Returns: dict — terminal response object from the model
